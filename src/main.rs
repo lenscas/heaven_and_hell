@@ -10,6 +10,7 @@ use quicksilver::{
     Result,
 };
 
+mod directions;
 mod screens;
 use async_trait::async_trait;
 use std::collections::HashMap;
@@ -43,6 +44,17 @@ fn main() {
 #[derive(Eq, PartialEq, Hash, Clone, Copy, Debug)]
 enum Block {
     Dirt,
+    Air,
+    PlayerStart,
+}
+
+impl Block {
+    pub fn can_render(self) -> bool {
+        match self {
+            Block::Air | Block::PlayerStart => false,
+            _ => true,
+        }
+    }
 }
 
 impl From<char> for Block {
@@ -53,6 +65,8 @@ impl From<char> for Block {
             .expect(&format!("{} was not able to be lowercased", c));
         match c {
             'b' => Block::Dirt,
+            'a' => Block::Air,
+            'p' => Block::PlayerStart,
             x => unreachable!("Got invalid char {}", x),
         }
     }
@@ -62,6 +76,7 @@ impl From<Block> for &'static str {
     fn from(from: Block) -> Self {
         match from {
             Block::Dirt => "blocks/dirt.png",
+            Block::Air | Block::PlayerStart => panic!("has no valid image"),
         }
     }
 }
@@ -109,7 +124,7 @@ impl<'a> Wrapper<'a> {
             let mut blocks = vec![];
             let mut last = Vec::new();
             for c in loaded.into_iter().map(|v| char::from(v)) {
-                println!("{}", c);
+                print!("{}", c);
                 if c == '\n' {
                     let mut new = Vec::new();
                     std::mem::swap(&mut last, &mut new);
