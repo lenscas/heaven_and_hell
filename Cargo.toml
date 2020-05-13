@@ -1,0 +1,12 @@
+[package]
+name = "heaven_and_hell"
+version = "0.1.0"
+authors = ["lenscas <lenscas@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+quicksilver = {version="0.4.0-alpha0.3", features=["webstd"]}
+mergui = "0.1.0-alpha.1"
+silver_animation = {git="https://github.com/lenscas/silver_animation"}
