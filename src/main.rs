@@ -3,13 +3,12 @@ use mergui::Context;
 use quicksilver::lifecycle::Event::{self, PointerMoved};
 use quicksilver::{
     geom::Vector,
-    graphics::{Graphics, Image},
+    graphics::{Graphics, Image as QSImage},
     lifecycle::{run, EventStream, Settings, Window},
     load_file,
     mint::Vector2,
     Result,
 };
-
 mod directions;
 mod screens;
 use async_trait::async_trait;
@@ -55,6 +54,12 @@ impl Block {
             _ => true,
         }
     }
+    pub fn is_colideable(self) -> bool {
+        match self {
+            Block::Air | Block::PlayerStart => false,
+            x => true,
+        }
+    }
 }
 
 impl From<char> for Block {
@@ -93,7 +98,7 @@ pub(crate) struct Wrapper<'a> {
     pub events: EventStream,
     pub context: Context<'a>,
     pub cursor_at: Vector2<f32>,
-    pub blocks: HashMap<Block, Image>,
+    pub blocks: HashMap<Block, QSImage>,
     pub levels: HashMap<u32, Vec<Vec<Block>>>,
 }
 
@@ -105,12 +110,14 @@ impl<'a> Wrapper<'a> {
         let res = self.window.size();
         Vector::new(x * res.x, y * res.y)
     }
-    pub(crate) async fn get_block(&mut self, block: Block) -> Result<Image> {
+    pub(crate) async fn get_block(&mut self, block: Block) -> Result<QSImage> {
         if let Some(block) = self.blocks.get(&block) {
             Ok(block.clone())
         } else {
-            let loaded = Image::load(&self.gfx, String::from(block)).await?;
-            self.blocks.insert(block, loaded);
+            let g = load_file(String::from(block)).await?;
+            let h = image::load_from_memory(&g).unwrap();
+            let g = QSImage::from_encoded_bytes(&self.gfx, &h.to_bytes());
+            self.blocks.insert(block, g);
             Ok(self.blocks.get(&block).expect("HOW!?").clone())
         }
     }
