@@ -13,6 +13,7 @@ mod directions;
 mod screens;
 use async_trait::async_trait;
 use std::collections::HashMap;
+use quicksilver::golem::ColorFormat;
 
 #[async_trait(?Send)]
 pub(crate) trait Screen {
@@ -116,7 +117,25 @@ impl<'a> Wrapper<'a> {
         } else {
             let g = load_file(String::from(block)).await?;
             let h = image::load_from_memory(&g).unwrap();
-            let g = QSImage::from_encoded_bytes(&self.gfx, &h.to_bytes());
+            let raw = h.into_rgb();
+            let mut dithered = image::ImageBuffer::new(16, 16);
+            for (x, y, pixel) in dithered.enumerate_pixels_mut() {
+                let raw_pixel = raw.get_pixel(x / 2, y / 2);
+                if (x + y) % 2 == 0 {
+                    *pixel = image::Rgb([
+                        if raw_pixel.0[0] == 255 { 255 } else { 0 },
+                        if raw_pixel.0[1] == 255 { 255 } else { 0 },
+                        if raw_pixel.0[2] == 255 { 255 } else { 0 },
+                    ])
+                } else {
+                    *pixel = image::Rgb([
+                        if raw_pixel.0[0] == 0 { 0 } else { 255 },
+                        if raw_pixel.0[1] == 0 { 0 } else { 255 },
+                        if raw_pixel.0[2] == 0 { 0 } else { 255 },
+                    ])
+                }
+            }
+            let g = QSImage::from_raw(&self.gfx, Some(&dithered.into_raw()), 16, 16, ColorFormat::RGB)?;
             self.blocks.insert(block, g);
             Ok(self.blocks.get(&block).expect("HOW!?").clone())
         }
