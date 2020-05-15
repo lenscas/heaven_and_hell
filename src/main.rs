@@ -114,8 +114,6 @@ impl<'a> Wrapper<'a> {
     pub(crate) async fn get_block(&mut self, block: Block, x: f64, y: f64) -> QSImage {
         let bx = x.floor() as u32 / 64; // May need to add .5
         let by = y.floor() as u32 / 64; // May need to add .5
-
-        println!("x{} y{}", bx, by);
         if !self.images.contains_key(&(bx, by)) {
             let raw = image::load_from_memory(&load_file(String::from(block)).await.unwrap())
                 .unwrap()
