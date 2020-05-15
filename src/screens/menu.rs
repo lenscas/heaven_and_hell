@@ -91,7 +91,7 @@ impl Menu {
                     let collider_handle = colliders.insert(block_handler);
                     level_as_colliders.push(collider_handle);
                 } else {
-                    dbg!((block, x, y));
+                    // dbg!((block, x, y));
                 }
             }
         }
@@ -190,14 +190,14 @@ impl Screen for Menu {
         );
         if let Some(player) = self.colliders.get(self.player_body) {
             let pos = player.position().translation;
-            dbg!(pos);
+            // dbg!(pos);
             /*
             let pos = Vector::new(
                 (pos.x - (PLAYER_WIDTH as f64 / 2.)) as f32,
                 (pos.y - (PLAYER_HEIGHT as f64 / 2.)) as f32,
             );*/
-            dbg!(pos);
-            dbg!(self.player_pos);
+            // dbg!(pos);
+            // dbg!(self.player_pos);
             let rect = Rectangle::new((pos.x as f32, pos.y as f32), (PLAYER_WIDTH, PLAYER_HEIGHT));
 
             wrapper.gfx.fill_rect(&rect, Color::RED);
@@ -317,7 +317,7 @@ impl Screen for Menu {
             Event::KeyboardInput(x) => {
                 if x.key() == Key::W {
                     if let Some(player) = self.colliders.get_mut(self.player_body) {
-                        dbg!(player.position());
+                        // dbg!(player.position());
                         if let Some(body) = self.bodies.get_mut(player.body()) {
                             body.apply_force(
                                 0,
@@ -326,8 +326,8 @@ impl Screen for Menu {
                                 true,
                             );
                             //body.set_velocity(V2::new(20., 20.));
-                            dbg!(body.is_dynamic());
-                            dbg!(body.status());
+                            // dbg!(body.is_dynamic());
+                            // dbg!(body.status());
                         }
                     }
                     if self.jump_force.is_none() {

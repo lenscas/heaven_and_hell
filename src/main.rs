@@ -14,6 +14,7 @@ mod screens;
 use async_trait::async_trait;
 use quicksilver::golem::ColorFormat;
 use std::collections::HashMap;
+use rand::seq::SliceRandom;
 
 #[async_trait(?Send)]
 pub(crate) trait Screen {
@@ -112,29 +113,41 @@ impl<'a> Wrapper<'a> {
         Vector::new(x * res.x, y * res.y)
     }
     pub(crate) async fn get_block(&mut self, block: Block, x: f64, y: f64) -> QSImage {
-        let bx = x.floor() as u32 / 64; // May need to add .5
-        let by = y.floor() as u32 / 64; // May need to add .5
-
-        println!("x{} y{}", bx, by);
+        let bx = x.floor() as u32 / 32;
+        let by = y.floor() as u32 / 32;
         if !self.images.contains_key(&(bx, by)) {
             let raw = image::load_from_memory(&load_file(String::from(block)).await.unwrap())
                 .unwrap()
                 .into_rgb();
             let mut dithered = image::ImageBuffer::new(16, 16);
-            for (px, py, pixel) in dithered.enumerate_pixels_mut() {
-                let raw_pixel = raw.get_pixel(px / 2, py / 2);
-                if (bx + by + px + py) % 2 == 0 {
-                    *pixel = image::Rgb([
-                        if raw_pixel.0[0] == 255 { 255 } else { 0 },
-                        if raw_pixel.0[1] == 255 { 255 } else { 0 },
-                        if raw_pixel.0[2] == 255 { 255 } else { 0 },
-                    ])
-                } else {
-                    *pixel = image::Rgb([
-                        if raw_pixel.0[0] == 0 { 0 } else { 255 },
-                        if raw_pixel.0[1] == 0 { 0 } else { 255 },
-                        if raw_pixel.0[2] == 0 { 0 } else { 255 },
-                    ])
+            for (rx, ry, pixel) in raw.enumerate_pixels() {
+                let (r, g, b) = (pixel[0], pixel[1], pixel[2]);
+                let count = [
+                    (r as f32 / (255. / 4.)).round() as u8,
+                    (g as f32 / (255. / 4.)).round() as u8,
+                    (b as f32 / (255. / 4.)).round() as u8,
+                ];
+                let mut channels = [
+                    [0u8; 4],
+                    [0u8; 4],
+                    [0u8; 4],
+                ];
+                let mut pixels = [[image::Rgb([0, 0, 0]); 2]; 2];
+                for c in 0..3 {
+                    for i in 0..count[c] {
+                        channels[c][i as usize] = 255u8;
+                    }
+                    channels[c].shuffle(&mut rand::thread_rng());
+                    for x in 0..2 {
+                        for y in 0..2 {
+                            pixels[x][y][c] = channels[c][x * 2 + y];
+                        }
+                    }
+                }
+                for x in 0..2 {
+                    for y in 0..2 {
+                        dithered.put_pixel(rx * 2 + x, ry * 2 + y, pixels[x as usize][y as usize]);
+                    }
                 }
             }
             let g = QSImage::from_raw(

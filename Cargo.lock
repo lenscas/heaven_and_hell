@@ -1063,6 +1063,7 @@ dependencies = [
  "ncollide2d",
  "nphysics2d",
  "quicksilver",
+ "rand 0.7.3",
  "silver_animation",
 ]
 
