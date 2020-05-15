@@ -1,6 +1,6 @@
 use crate::{directions::Directions, Block, Screen, Wrapper};
 use quicksilver::{
-    geom::{Rectangle, Vector},
+    geom::{Rectangle, Transform, Vector},
     graphics::Color,
     lifecycle::{Event, Key},
     Result,
@@ -48,6 +48,7 @@ pub struct Menu {
     level_as_colliders: Vec<DefaultColliderHandle>,
     jump_count: u32,
     max_jumps: u32,
+    translate_x: f32,
 }
 
 impl Menu {
@@ -132,6 +133,7 @@ impl Menu {
             level_as_colliders,
             jump_count: 0,
             max_jumps: 1,
+            translate_x: 0.,
         })
     }
 }
@@ -142,6 +144,13 @@ const BLOCK_SIZE_I32: i32 = 32;
 #[async_trait(?Send)]
 impl Screen for Menu {
     async fn draw(&mut self, wrapper: &mut crate::Wrapper<'_>) -> quicksilver::Result<()> {
+        if self.player_pos.x > 320. {
+            wrapper.gfx.set_transform(
+                Transform::translate(Vector::new((self.player_pos.x - 320.).floor(), 0)).inverse(),
+            );
+        } else {
+            wrapper.gfx.set_transform(Transform::IDENTITY);
+        }
         wrapper.gfx.clear(Color::WHITE);
         for collider in self.level_as_colliders.iter().cloned() {
             if let Some(collider) = self.colliders.get(collider) {
@@ -165,9 +174,11 @@ impl Screen for Menu {
         }
         if let Some(player) = self.colliders.get(self.player_body) {
             let pos = player.position().translation;
-            let rect = Rectangle::new((pos.x as f32, pos.y as f32), (PLAYER_WIDTH, PLAYER_HEIGHT));
+            let pos = Vector::new(pos.x as f32, pos.y as f32);
+            let rect = Rectangle::new(pos, (PLAYER_WIDTH, PLAYER_HEIGHT));
 
             wrapper.gfx.fill_rect(&rect, Color::RED);
+            self.player_pos = pos;
         }
         Ok(())
     }
