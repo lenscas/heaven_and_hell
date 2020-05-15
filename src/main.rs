@@ -13,8 +13,8 @@ mod directions;
 mod screens;
 use async_trait::async_trait;
 use quicksilver::golem::ColorFormat;
-use std::collections::HashMap;
 use rand::seq::SliceRandom;
+use std::collections::HashMap;
 
 #[async_trait(?Send)]
 pub(crate) trait Screen {
@@ -47,6 +47,7 @@ enum Block {
     Dirt,
     Air,
     PlayerStart,
+    PlayerEnd,
 }
 
 impl Block {
@@ -59,7 +60,7 @@ impl Block {
     pub fn is_colideable(self) -> bool {
         match self {
             Block::Air | Block::PlayerStart => false,
-            x => true,
+            _ => true,
         }
     }
 }
@@ -74,6 +75,7 @@ impl From<char> for Block {
             'b' => Block::Dirt,
             'a' => Block::Air,
             'p' => Block::PlayerStart,
+            'e' => Block::PlayerEnd,
             x => unreachable!("Got invalid char {}", x),
         }
     }
@@ -84,6 +86,7 @@ impl From<Block> for &'static str {
         match from {
             Block::Dirt => "blocks/dirt.png",
             Block::Air | Block::PlayerStart => panic!("has no valid image"),
+            Block::PlayerEnd => "blocks/end.png",
         }
     }
 }
@@ -102,6 +105,7 @@ pub(crate) struct Wrapper<'a> {
     pub cursor_at: Vector2<f32>,
     pub levels: HashMap<u32, Vec<Vec<Block>>>,
     pub images: HashMap<(u32, u32), QSImage>,
+    pub player: (QSImage, QSImage),
 }
 
 impl<'a> Wrapper<'a> {
@@ -112,6 +116,14 @@ impl<'a> Wrapper<'a> {
         let res = self.window.size();
         Vector::new(x * res.x, y * res.y)
     }
+
+    pub fn get_player(&mut self, is_flying: bool) -> QSImage {
+        match is_flying {
+            true => self.player.1.clone(),
+            false => self.player.0.clone(),
+        }
+    }
+
     pub(crate) async fn get_block(&mut self, block: Block, x: f64, y: f64) -> QSImage {
         let bx = x.floor() as u32 / 32;
         let by = y.floor() as u32 / 32;
@@ -127,11 +139,7 @@ impl<'a> Wrapper<'a> {
                     (g as f32 / (255. / 4.)).round() as u8,
                     (b as f32 / (255. / 4.)).round() as u8,
                 ];
-                let mut channels = [
-                    [0u8; 4],
-                    [0u8; 4],
-                    [0u8; 4],
-                ];
+                let mut channels = [[0u8; 4], [0u8; 4], [0u8; 4]];
                 let mut pixels = [[image::Rgb([0, 0, 0]); 2]; 2];
                 for c in 0..3 {
                     for i in 0..count[c] {
@@ -203,6 +211,9 @@ impl<'a> Wrapper<'a> {
 
 async fn app(window: Window, gfx: Graphics, events: EventStream) -> Result<()> {
     let context = Context::new([0.0, 0.0].into());
+    let fly = QSImage::from_encoded_bytes(&gfx, include_bytes!("../static/blocks/char_fly.png"))?;
+    let normal =
+        QSImage::from_encoded_bytes(&gfx, include_bytes!("../static/blocks/char_stand.png"))?;
     let mut wrapper = Wrapper {
         window,
         gfx,
@@ -211,6 +222,7 @@ async fn app(window: Window, gfx: Graphics, events: EventStream) -> Result<()> {
         cursor_at: Vector2::from_slice(&[0f32, 0f32]),
         levels: HashMap::new(),
         images: HashMap::new(),
+        player: (fly, normal),
     };
     let mut v: Box<dyn Screen> = Box::new(screens::menu::Menu::new(&mut wrapper).await?);
     v.draw(&mut wrapper).await?;
