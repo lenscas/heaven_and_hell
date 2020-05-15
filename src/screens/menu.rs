@@ -27,7 +27,8 @@ use nphysics2d::{
 
 use std::{collections::HashSet, convert::TryFrom};
 
-const JUMP_FORCE: f64 = -3500000000000.;
+const JUMP_VELOCITY: f64 = -100.;
+const WALK_VELOCITY: f32 = 10.;
 
 const PLAYER_WIDTH: i32 = 16;
 const PLAYER_HEIGHT: i32 = 32;
@@ -51,7 +52,8 @@ pub struct Menu {
 
 impl Menu {
     pub(crate) async fn new(wrapper: &mut Wrapper<'_>) -> Result<Self> {
-        let mut mechanical_world = DefaultMechanicalWorld::new(V2::new(0.0, 100.)); //9.81
+        let mut mechanical_world =
+            DefaultMechanicalWorld::new(V2::new(0.0, 9.81 * BLOCK_SIZE_I32 as f64)); //9.81
         let mut geometrical_world = DefaultGeometricalWorld::new();
 
         let mut bodies = DefaultBodySet::new();
@@ -96,13 +98,14 @@ impl Menu {
             .translation(V2::new(player_pos.x as f64, player_pos.y as f64))
             .gravity_enabled(true)
             .status(BodyStatus::Dynamic)
-            .mass(500000000.)
+            .mass(1.)
             .build();
         player_body.disable_all_rotations();
         let reference = bodies.insert(player_body);
         let player_shape = ColliderDesc::new(ShapeHandle::new(ncollide2d::shape::Cuboid::new(
             V2::new(PLAYER_WIDTH as f64 / 2., PLAYER_HEIGHT as f64 / 2.),
         )))
+        .density(2.)
         .build(BodyPartHandle(reference, 0));
         let collider_handle = colliders.insert(player_shape);
 
@@ -180,8 +183,8 @@ impl Screen for Menu {
                 }
                 body.apply_force(
                     0,
-                    &Force::new(V2::new((momentum.x * 200000000000.) as f64, 0.), 0.),
-                    ForceType::Force,
+                    &Force::new(V2::new((momentum.x * WALK_VELOCITY) as f64, 0.), 0.),
+                    ForceType::VelocityChange,
                     true,
                 );
             }
@@ -222,15 +225,15 @@ impl Screen for Menu {
                                 self.jump_count += 1;
                                 body.apply_force(
                                     0,
-                                    &Force::new(V2::new(0., JUMP_FORCE), 0.),
-                                    ForceType::Force,
+                                    &Force::new(V2::new(0., JUMP_VELOCITY), 0.),
+                                    ForceType::VelocityChange,
                                     true,
                                 );
                             }
                         }
                     }
                     if self.jump_force.is_none() {
-                        self.jump_force = Some(JUMP_FORCE as f32);
+                        self.jump_force = Some(JUMP_VELOCITY as f32);
                     }
                 } else if let Ok(d) = Directions::try_from(x.key()) {
                     if x.is_down() {
