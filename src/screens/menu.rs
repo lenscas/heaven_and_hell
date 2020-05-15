@@ -58,7 +58,7 @@ impl Screen for Menu {
                     (BLOCK_SIZE_I32, BLOCK_SIZE_I32),
                 );
                 if block.can_render() {
-                    let block = wrapper.get_block(*block).await?;
+                    let block = wrapper.get_block(*block, x as f64, y as f64).await;
                     wrapper.gfx.draw_image(&block, location);
                 } else {
                     wrapper.gfx.fill_rect(&location, Color::WHITE)
@@ -104,7 +104,7 @@ impl Screen for Menu {
         if let Some(jump_force) = &mut self.jump_force {
             momentum.y = -*jump_force;
             *jump_force -= JUMP_FORCE_SLOWDOWN;
-            println!("{}", jump_force);
+            // println!("{}", jump_force);
             if *jump_force < JUMP_FORCE_MAX_FALL {
                 *jump_force = JUMP_FORCE_MAX_FALL;
             }

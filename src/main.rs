@@ -12,8 +12,8 @@ use quicksilver::{
 mod directions;
 mod screens;
 use async_trait::async_trait;
-use std::collections::HashMap;
 use quicksilver::golem::ColorFormat;
+use std::collections::HashMap;
 
 #[async_trait(?Send)]
 pub(crate) trait Screen {
@@ -99,8 +99,8 @@ pub(crate) struct Wrapper<'a> {
     pub events: EventStream,
     pub context: Context<'a>,
     pub cursor_at: Vector2<f32>,
-    pub blocks: HashMap<Block, QSImage>,
     pub levels: HashMap<u32, Vec<Vec<Block>>>,
+    pub images: HashMap<(u32, u32), QSImage>,
 }
 
 impl<'a> Wrapper<'a> {
@@ -111,17 +111,17 @@ impl<'a> Wrapper<'a> {
         let res = self.window.size();
         Vector::new(x * res.x, y * res.y)
     }
-    pub(crate) async fn get_block(&mut self, block: Block) -> Result<QSImage> {
-        if let Some(block) = self.blocks.get(&block) {
-            Ok(block.clone())
-        } else {
-            let g = load_file(String::from(block)).await?;
-            let h = image::load_from_memory(&g).unwrap();
-            let raw = h.into_rgb();
+    pub(crate) async fn get_block(&mut self, block: Block, x: f64, y: f64) -> QSImage {
+        let bx = x.floor() as u32 / 64; // May need to add .5
+        let by = y.floor() as u32 / 64; // May need to add .5
+
+        println!("x{} y{}", bx, by);
+        if !self.images.contains_key(&(bx, by)) {
+            let raw = image::load_from_memory(&load_file(String::from(block)).await.unwrap()).unwrap().into_rgb();
             let mut dithered = image::ImageBuffer::new(16, 16);
-            for (x, y, pixel) in dithered.enumerate_pixels_mut() {
-                let raw_pixel = raw.get_pixel(x / 2, y / 2);
-                if (x + y) % 2 == 0 {
+            for (px, py, pixel) in dithered.enumerate_pixels_mut() {
+                let raw_pixel = raw.get_pixel(px / 2, py / 2);
+                if (bx + by + px + py) % 2 == 0 {
                     *pixel = image::Rgb([
                         if raw_pixel.0[0] == 255 { 255 } else { 0 },
                         if raw_pixel.0[1] == 255 { 255 } else { 0 },
@@ -135,22 +135,37 @@ impl<'a> Wrapper<'a> {
                     ])
                 }
             }
-            let g = QSImage::from_raw(&self.gfx, Some(&dithered.into_raw()), 16, 16, ColorFormat::RGB)?;
-            self.blocks.insert(block, g);
-            Ok(self.blocks.get(&block).expect("HOW!?").clone())
+            let g = QSImage::from_raw(&self.gfx, Some(&dithered.into_raw()), 16, 16, ColorFormat::RGB).unwrap();
+            self.images.insert((bx, by), g);
         }
+        self.images
+            .get(&(bx, by))
+            .expect("shouldn't happen")
+            .clone()
+
+        // if self.images.get(&String::from("blocks/dirt.png")).is_none() {
+        //     self.images.insert(
+        //         String::from("blocks/dirt.png"),
+        //         QSImage::load(&self.gfx, "blocks/dirt.png").await.unwrap(),
+        //     );
+        // }
+        // self.images
+        //     .get(&String::from("blocks/dirt.png"))
+        //     .unwrap()
+        //     .clone()
     }
     pub(crate) async fn get_level(&mut self, level_id: u32) -> Result<Vec<Vec<Block>>> {
+        self.images = HashMap::new();
         if let Some(block) = self.levels.get(&level_id) {
             Ok(block.clone())
         } else {
-            println!("got here?");
+            // println!("got here?");
             let loaded = load_file(&format!("levels/{}.txt", level_id)).await?;
-            println!("but not here?");
+            // println!("but not here?");
             let mut blocks = vec![];
             let mut last = Vec::new();
             for c in loaded.into_iter().map(|v| char::from(v)) {
-                print!("{}", c);
+                // print!("{}", c);
                 if c == '\n' {
                     let mut new = Vec::new();
                     std::mem::swap(&mut last, &mut new);
@@ -173,8 +188,8 @@ async fn app(window: Window, gfx: Graphics, events: EventStream) -> Result<()> {
         events,
         context,
         cursor_at: Vector2::from_slice(&[0f32, 0f32]),
-        blocks: HashMap::new(),
         levels: HashMap::new(),
+        images: HashMap::new(),
     };
     let mut v: Box<dyn Screen> = Box::new(screens::menu::Menu::new(&mut wrapper).await?);
     v.draw(&mut wrapper).await?;
