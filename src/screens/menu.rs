@@ -174,8 +174,10 @@ impl Screen for Menu {
                             .user_data()
                             .and_then(|v| v.downcast_ref::<Block>().map(|v| *v))
                             .unwrap_or(Block::Dirt),
+                        pos.x,
+                        pos.y,
                     )
-                    .await?;
+                    .await;
                 wrapper.gfx.draw_image(&block, rec)
             }
         }
