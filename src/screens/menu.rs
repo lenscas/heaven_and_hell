@@ -27,7 +27,7 @@ use nphysics2d::{
 
 use std::{collections::HashSet, convert::TryFrom};
 
-const JUMP_VELOCITY: f64 = -100.;
+const JUMP_VELOCITY: f64 = -200.;
 const WALK_VELOCITY: f32 = 10.;
 
 const PLAYER_WIDTH: i32 = 16;
@@ -48,7 +48,6 @@ pub struct Menu {
     level_as_colliders: Vec<DefaultColliderHandle>,
     jump_count: u32,
     max_jumps: u32,
-    translate_x: f32,
 }
 
 impl Menu {
@@ -101,11 +100,13 @@ impl Menu {
             .status(BodyStatus::Dynamic)
             .mass(1.)
             .build();
+
         player_body.disable_all_rotations();
         let reference = bodies.insert(player_body);
         let player_shape = ColliderDesc::new(ShapeHandle::new(ncollide2d::shape::Cuboid::new(
             V2::new(PLAYER_WIDTH as f64 / 2., PLAYER_HEIGHT as f64 / 2.),
         )))
+        .ccd_enabled(true)
         .density(2.)
         .build(BodyPartHandle(reference, 0));
         let collider_handle = colliders.insert(player_shape);
@@ -133,7 +134,6 @@ impl Menu {
             level_as_colliders,
             jump_count: 0,
             max_jumps: 1,
-            translate_x: 0.,
         })
     }
 }
