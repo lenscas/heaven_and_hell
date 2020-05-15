@@ -114,10 +114,11 @@ impl<'a> Wrapper<'a> {
         if let Some(block) = self.blocks.get(&block) {
             Ok(block.clone())
         } else {
-            let g = load_file(String::from(block)).await?;
-            let h = image::load_from_memory(&g).unwrap();
-            let g = QSImage::from_encoded_bytes(&self.gfx, &h.to_bytes());
-            self.blocks.insert(block, g);
+            //let g = load_file(String::from(block)).await?;
+            //let h = image::load_from_memory(&g).unwrap();
+            //let g = QSImage::from_encoded_bytes(&self.gfx, &h.to_bytes())?;
+            let image = QSImage::load(&self.gfx, &String::from(block)).await?;
+            self.blocks.insert(block, image);
             Ok(self.blocks.get(&block).expect("HOW!?").clone())
         }
     }
@@ -125,13 +126,10 @@ impl<'a> Wrapper<'a> {
         if let Some(block) = self.levels.get(&level_id) {
             Ok(block.clone())
         } else {
-            println!("got here?");
             let loaded = load_file(&format!("levels/{}.txt", level_id)).await?;
-            println!("but not here?");
             let mut blocks = vec![];
             let mut last = Vec::new();
             for c in loaded.into_iter().map(|v| char::from(v)) {
-                print!("{}", c);
                 if c == '\n' {
                     let mut new = Vec::new();
                     std::mem::swap(&mut last, &mut new);

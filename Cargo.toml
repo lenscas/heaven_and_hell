@@ -12,3 +12,8 @@ image = "0.23.4"
 mergui = "0.1.0-alpha.1"
 silver_animation = {git="https://github.com/lenscas/silver_animation"}
 async-trait = "*"
+nalgebra = "0.20"
+# Choose the one you need, or both.
+ncollide2d = "0.22"
+# Choose the one you need, or both.
+nphysics2d = "0.14"
