@@ -32,7 +32,7 @@ pub fn generate_maze(node_size: (usize, usize)) -> Vec<Vec<Block>> {
         let mut choices = Vec::<Dir>::new();
         //Checking
         let pos_new = (pos.0, pos.1.wrapping_sub(1));
-        if pos_new.1 != usize::MAX && point_free[pos_new.0][pos_new.1] {
+        if pos_new.1 != std::usize::MAX && point_free[pos_new.0][pos_new.1] {
             choices.push(Dir::Down);
         }
         let pos_new = (pos.0, pos.1 + 1);
@@ -40,7 +40,7 @@ pub fn generate_maze(node_size: (usize, usize)) -> Vec<Vec<Block>> {
             choices.push(Dir::Up);
         }
         let pos_new = (pos.0.wrapping_sub(1), pos.1);
-        if pos_new.0 != usize::MAX && point_free[pos_new.0][pos_new.1] {
+        if pos_new.0 != std::usize::MAX && point_free[pos_new.0][pos_new.1] {
             choices.push(Dir::Left);
         }
         let pos_new = (pos.0 + 1, pos.1);
@@ -53,24 +53,28 @@ pub fn generate_maze(node_size: (usize, usize)) -> Vec<Vec<Block>> {
                 match choices.choose(&mut rnd).unwrap() {
                     Dir::Down => {
                         let result_node = (pos.0, pos.1 - 1);
-                        result_blocks[node_to_block(result_node.0)][node_to_block(result_node.1) + 1] = Block::Air;
+                        result_blocks[node_to_block(result_node.0)]
+                            [node_to_block(result_node.1) + 1] = Block::Air;
                         result_node
-                    },
+                    }
                     Dir::Up => {
                         let result_node = (pos.0, pos.1 + 1);
-                        result_blocks[node_to_block(result_node.0)][node_to_block(result_node.1) - 1] = Block::Air;
+                        result_blocks[node_to_block(result_node.0)]
+                            [node_to_block(result_node.1) - 1] = Block::Air;
                         result_node
-                    },
+                    }
                     Dir::Left => {
                         let result_node = (pos.0 - 1, pos.1);
-                        result_blocks[node_to_block(result_node.0) + 1][node_to_block(result_node.1)] = Block::Air;
+                        result_blocks[node_to_block(result_node.0) + 1]
+                            [node_to_block(result_node.1)] = Block::Air;
                         result_node
-                    },
+                    }
                     Dir::Right => {
                         let result_node = (pos.0 + 1, pos.1);
-                        result_blocks[node_to_block(result_node.0) - 1][node_to_block(result_node.1)] = Block::Air;
+                        result_blocks[node_to_block(result_node.0) - 1]
+                            [node_to_block(result_node.1)] = Block::Air;
                         result_node
-                    },
+                    }
                 }
             };
             position_stack.push(node);

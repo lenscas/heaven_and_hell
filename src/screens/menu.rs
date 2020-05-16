@@ -51,10 +51,11 @@ pub struct Menu {
     is_flying: bool,
     end_colider: DefaultColliderHandle,
     render_going_to_left: bool,
+    current_level: u32,
 }
 
 impl Menu {
-    pub(crate) async fn new(wrapper: &mut Wrapper<'_>) -> Result<Self> {
+    pub(crate) async fn new(wrapper: &mut Wrapper<'_>, current_level: u32) -> Result<Self> {
         let mut mechanical_world =
             DefaultMechanicalWorld::new(V2::new(0.0, 9.81 * BLOCK_SIZE_I32 as f64)); //9.81
         let mut geometrical_world = DefaultGeometricalWorld::new();
@@ -64,7 +65,7 @@ impl Menu {
         let mut joint_constraints = DefaultJointConstraintSet::new();
         let mut force_generators = DefaultForceGeneratorSet::new();
 
-        let level = wrapper.get_level(1).await?;
+        let level = wrapper.get_level(current_level).await?;
 
         let mut level_as_colliders = Vec::new();
         let mut end_collider = None;
@@ -143,6 +144,7 @@ impl Menu {
             is_flying: false,
             end_colider: end_collider.expect("Level does not have an end!"),
             render_going_to_left: false,
+            current_level,
         })
     }
 }
@@ -234,7 +236,9 @@ impl Screen for Menu {
                     if (x == &self.player_body && y == &self.end_colider)
                         || (x == &self.end_colider && y == &self.player_body)
                     {
-                        return Ok(Some(Box::new(Menu::new(wrapper).await?)));
+                        return Ok(Some(Box::new(
+                            Menu::new(wrapper, self.current_level + 1).await?,
+                        )));
                     }
                     if x == &self.player_body {
                         self.jump_count = 0;
