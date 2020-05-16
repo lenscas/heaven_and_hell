@@ -107,6 +107,7 @@ pub(crate) struct Wrapper<'a> {
     pub levels: HashMap<u32, Vec<Vec<Block>>>,
     pub images: HashMap<(u32, u32), QSImage>,
     pub player: PlayerHolder,
+    pub raw: HashMap<Block, Vec<u8>>,
 }
 
 impl<'a> Wrapper<'a> {
@@ -123,7 +124,11 @@ impl<'a> Wrapper<'a> {
         let bx = x.floor() as u32 / 32;
         let by = y.floor() as u32 / 32;
         if !self.images.contains_key(&(bx, by)) {
-            let raw = image::load_from_memory(&load_file(String::from(block)).await.unwrap())
+            if !self.raw.contains_key(&block) {
+                self.raw
+                    .insert(block, load_file(String::from(block)).await.unwrap());
+            }
+            let raw = image::load_from_memory(self.raw.get(&block).expect("shouldn't happen"))
                 .unwrap()
                 .into_rgb();
             let mut dithered = image::ImageBuffer::new(16, 16);
@@ -226,6 +231,7 @@ async fn app(window: Window, gfx: Graphics, events: EventStream) -> Result<()> {
         cursor_at: Vector2::from_slice(&[0f32, 0f32]),
         levels: HashMap::new(),
         images: HashMap::new(),
+        raw: HashMap::new(),
         player: PlayerHolder {
             flying,
             flying_inverted,
