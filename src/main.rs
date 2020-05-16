@@ -205,7 +205,8 @@ impl<'a> Wrapper<'a> {
             //     }
             // }
             // self.levels.insert(level_id, blocks);
-            self.levels.insert(level_id, maze_gen::generate_maze((40, 40)));
+            let size = 7 + 2 * level_id as usize;
+            self.levels.insert(level_id, maze_gen::generate_maze((size, size)));
             Ok(self.levels.get(&level_id).expect("HOW!?").clone())
         }
     }

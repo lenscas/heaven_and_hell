@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 use rand::Rng;
+use rand::seq::SliceRandom;
 use crate::Block;
 
 fn node_to_block(value: usize) -> usize {
@@ -13,11 +14,13 @@ enum Dir {
 }
 /// resulting size is (X * 2 + 1, Y * 2 + 1)
 pub fn generate_maze(node_size: (usize, usize)) -> Vec<Vec<Block>> {
-    let size_blocks = (node_size.0 * 2 + 1, node_size.1 * 2 + 1);
+    let size_blocks = (node_to_block(node_size.0), node_to_block(node_size.1));
     let mut result_blocks = vec![vec![Block::Dirt; size_blocks.1]; size_blocks.0];
     let mut position_stack = Vec::new();
     let mut point_free = vec![vec![true; size_blocks.1]; size_blocks.0];
     let mut rnd = rand::thread_rng();
+    let mut end_pos = (0, 0);
+    let mut end_distance = 1;
     //Start
     let node = (rnd.gen_range(0, node_size.0), rnd.gen_range(0, node_size.1));
     position_stack.push(node);
@@ -47,7 +50,7 @@ pub fn generate_maze(node_size: (usize, usize)) -> Vec<Vec<Block>> {
         //Acting
         if choices.len() > 0 {
             let node = {
-                match &choices[rnd.gen_range(0, choices.len())] {
+                match choices.choose(&mut rnd).unwrap() {
                     Dir::Down => {
                         let result_node = (pos.0, pos.1 - 1);
                         result_blocks[node_to_block(result_node.0)][node_to_block(result_node.1) + 1] = Block::Air;
@@ -73,9 +76,14 @@ pub fn generate_maze(node_size: (usize, usize)) -> Vec<Vec<Block>> {
             position_stack.push(node);
             point_free[node.0][node.1] = false;
             result_blocks[node_to_block(node.0)][node_to_block(node.1)] = Block::Air;
+            if position_stack.len() > end_distance {
+                end_distance = position_stack.len();
+                end_pos = *position_stack.last().unwrap();
+            }
         } else {
             position_stack.pop();
         }
     }
+    result_blocks[node_to_block(end_pos.0)][node_to_block(end_pos.1)] = Block::PlayerEnd;
     result_blocks
 }
