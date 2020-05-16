@@ -239,7 +239,7 @@ async fn app(window: Window, gfx: Graphics, events: EventStream) -> Result<()> {
             walking_inverted,
         },
     };
-    let mut v: Box<dyn Screen> = Box::new(screens::menu::Menu::new(&mut wrapper).await?);
+    let mut v: Box<dyn Screen> = Box::new(screens::menu::Menu::new(&mut wrapper, 1).await?);
     v.draw(&mut wrapper).await?;
     loop {
         while let Some(e) = wrapper.events.next_event().await {
