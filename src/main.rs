@@ -15,6 +15,7 @@ use async_trait::async_trait;
 use quicksilver::golem::ColorFormat;
 use std::collections::HashMap;
 use rand::seq::SliceRandom;
+mod maze_gen;
 
 #[async_trait(?Send)]
 pub(crate) trait Screen {
@@ -43,7 +44,7 @@ fn main() {
 }
 
 #[derive(Eq, PartialEq, Hash, Clone, Copy, Debug)]
-enum Block {
+pub enum Block {
     Dirt,
     Air,
     PlayerStart,
@@ -181,21 +182,22 @@ impl<'a> Wrapper<'a> {
         if let Some(block) = self.levels.get(&level_id) {
             Ok(block.clone())
         } else {
-            // println!("got here?");
-            let loaded = load_file(&format!("levels/{}.txt", level_id)).await?;
-            // println!("but not here?");
-            let mut blocks = vec![];
-            let mut last = Vec::new();
-            for c in loaded.into_iter().map(|v| char::from(v)) {
-                if c == '\n' {
-                    let mut new = Vec::new();
-                    std::mem::swap(&mut last, &mut new);
-                    blocks.push(new);
-                } else {
-                    last.push(Block::from(c))
-                }
-            }
-            self.levels.insert(level_id, blocks);
+            // // println!("got here?");
+            // let loaded = load_file(&format!("levels/{}.txt", level_id)).await?;
+            // // println!("but not here?");
+            // let mut blocks = vec![];
+            // let mut last = Vec::new();
+            // for c in loaded.into_iter().map(|v| char::from(v)) {
+            //     if c == '\n' {
+            //         let mut new = Vec::new();
+            //         std::mem::swap(&mut last, &mut new);
+            //         blocks.push(new);
+            //     } else {
+            //         last.push(Block::from(c))
+            //     }
+            // }
+            // self.levels.insert(level_id, blocks);
+            self.levels.insert(level_id, maze_gen::generate_maze((40, 40)));
             Ok(self.levels.get(&level_id).expect("HOW!?").clone())
         }
     }
