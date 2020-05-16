@@ -81,7 +81,7 @@ impl From<Block> for &'static str {
         match from {
             Block::Dirt => "blocks/dirt.png",
             Block::Air | Block::PlayerStart => panic!("has no valid image"),
-            Block::PlayerEnd => "blocks/end.png",
+            Block::PlayerEnd => "blocks/grave.png",
         }
     }
 }
@@ -109,6 +109,7 @@ pub(crate) struct Wrapper<'a> {
     pub images: HashMap<(u32, u32), QSImage>,
     pub player: PlayerHolder,
     pub raw: HashMap<Block, Vec<u8>>,
+    pub end_block: QSImage,
 }
 
 impl<'a> Wrapper<'a> {
@@ -124,6 +125,9 @@ impl<'a> Wrapper<'a> {
     pub(crate) async fn get_block(&mut self, block: Block, x: f64, y: f64) -> QSImage {
         let bx = x.floor() as u32 / 32;
         let by = y.floor() as u32 / 32;
+        if block == Block::PlayerEnd {
+            return self.end_block.clone();
+        }
         if !self.images.contains_key(&(bx, by)) {
             if !self.raw.contains_key(&block) {
                 self.raw
@@ -206,7 +210,8 @@ impl<'a> Wrapper<'a> {
             // }
             // self.levels.insert(level_id, blocks);
             let size = 7 + 2 * level_id as usize;
-            self.levels.insert(level_id, maze_gen::generate_maze((size, size)));
+            self.levels
+                .insert(level_id, maze_gen::generate_maze((size, size)));
             Ok(self.levels.get(&level_id).expect("HOW!?").clone())
         }
     }
@@ -226,6 +231,8 @@ async fn app(window: Window, gfx: Graphics, events: EventStream) -> Result<()> {
         &gfx,
         include_bytes!("../static/blocks/char_stand_inverted.png"),
     )?;
+    let end_block =
+        QSImage::from_encoded_bytes(&gfx, include_bytes!("../static/blocks/grave.png"))?;
     let mut wrapper = Wrapper {
         window,
         gfx,
@@ -241,6 +248,7 @@ async fn app(window: Window, gfx: Graphics, events: EventStream) -> Result<()> {
             walking,
             walking_inverted,
         },
+        end_block,
     };
     let mut v: Box<dyn Screen> = Box::new(screens::menu::Menu::new(&mut wrapper, 1).await?);
     v.draw(&mut wrapper).await?;
