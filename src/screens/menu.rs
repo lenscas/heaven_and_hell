@@ -50,6 +50,7 @@ pub struct Menu {
     max_jumps: u32,
     is_flying: bool,
     end_colider: DefaultColliderHandle,
+    render_going_to_left: bool,
 }
 
 impl Menu {
@@ -141,6 +142,7 @@ impl Menu {
             max_jumps: 1,
             is_flying: false,
             end_colider: end_collider.expect("Level does not have an end!"),
+            render_going_to_left: false,
         })
     }
 }
@@ -163,9 +165,8 @@ impl Screen for Menu {
             cam_pos.y = cam_pos.y.floor();
             cam_pos
         };
-        wrapper
-            .gfx
-            .set_transform(Transform::translate(cam_pos).inverse());
+        let transform = Transform::translate(cam_pos).inverse();
+        wrapper.gfx.set_transform(transform);
         wrapper.gfx.clear(Color::WHITE);
         for collider in self.level_as_colliders.iter().cloned() {
             if let Some(collider) = self.colliders.get(collider) {
@@ -190,9 +191,12 @@ impl Screen for Menu {
         if let Some(player) = self.colliders.get(self.player_body) {
             let pos = player.position().translation;
             let pos = Vector::new(pos.x as f32, pos.y as f32);
+            self.render_going_to_left = self.player_pos.x > pos.x;
             let rect = Rectangle::new(pos, (PLAYER_WIDTH, PLAYER_HEIGHT));
-            let image = wrapper.get_player(!self.is_flying);
+
+            let image = wrapper.get_player(!self.is_flying, self.render_going_to_left);
             wrapper.gfx.draw_image(&image, rect);
+
             self.player_pos = pos;
         }
         Ok(())

@@ -33,7 +33,7 @@ fn main() {
     run(
         Settings {
             size: Vector::new(640, 640).into(),
-            title: "Heaven and Hello",
+            title: "Heaven and Hell",
             resizable: false,
 
             ..Settings::default()
@@ -51,12 +51,6 @@ enum Block {
 }
 
 impl Block {
-    pub fn can_render(self) -> bool {
-        match self {
-            Block::Air | Block::PlayerStart => false,
-            _ => true,
-        }
-    }
     pub fn is_colideable(self) -> bool {
         match self {
             Block::Air | Block::PlayerStart => false,
@@ -97,6 +91,13 @@ impl From<Block> for String {
     }
 }
 
+pub struct PlayerHolder {
+    flying: QSImage,
+    flying_inverted: QSImage,
+    walking: QSImage,
+    walking_inverted: QSImage,
+}
+
 pub(crate) struct Wrapper<'a> {
     pub window: Window,
     pub gfx: Graphics,
@@ -105,22 +106,16 @@ pub(crate) struct Wrapper<'a> {
     pub cursor_at: Vector2<f32>,
     pub levels: HashMap<u32, Vec<Vec<Block>>>,
     pub images: HashMap<(u32, u32), QSImage>,
-    pub player: (QSImage, QSImage),
+    pub player: PlayerHolder,
 }
 
 impl<'a> Wrapper<'a> {
-    pub(crate) fn get_cursor_loc(&self) -> Vector2<f32> {
-        self.cursor_at
-    }
-    pub(crate) fn get_pos_vector(&self, x: f32, y: f32) -> Vector {
-        let res = self.window.size();
-        Vector::new(x * res.x, y * res.y)
-    }
-
-    pub fn get_player(&mut self, is_flying: bool) -> QSImage {
-        match is_flying {
-            true => self.player.1.clone(),
-            false => self.player.0.clone(),
+    pub fn get_player(&mut self, is_flying: bool, inverted: bool) -> QSImage {
+        match (is_flying, inverted) {
+            (true, false) => self.player.flying.clone(),
+            (false, false) => self.player.walking.clone(),
+            (true, true) => self.player.flying_inverted.clone(),
+            (false, true) => self.player.walking_inverted.clone(),
         }
     }
 
@@ -211,9 +206,18 @@ impl<'a> Wrapper<'a> {
 
 async fn app(window: Window, gfx: Graphics, events: EventStream) -> Result<()> {
     let context = Context::new([0.0, 0.0].into());
-    let fly = QSImage::from_encoded_bytes(&gfx, include_bytes!("../static/blocks/char_fly.png"))?;
-    let normal =
+    let flying =
+        QSImage::from_encoded_bytes(&gfx, include_bytes!("../static/blocks/char_fly.png"))?;
+    let walking =
         QSImage::from_encoded_bytes(&gfx, include_bytes!("../static/blocks/char_stand.png"))?;
+    let flying_inverted = QSImage::from_encoded_bytes(
+        &gfx,
+        include_bytes!("../static/blocks/char_fly_inverted.png"),
+    )?;
+    let walking_inverted = QSImage::from_encoded_bytes(
+        &gfx,
+        include_bytes!("../static/blocks/char_stand_inverted.png"),
+    )?;
     let mut wrapper = Wrapper {
         window,
         gfx,
@@ -222,7 +226,12 @@ async fn app(window: Window, gfx: Graphics, events: EventStream) -> Result<()> {
         cursor_at: Vector2::from_slice(&[0f32, 0f32]),
         levels: HashMap::new(),
         images: HashMap::new(),
-        player: (fly, normal),
+        player: PlayerHolder {
+            flying,
+            flying_inverted,
+            walking,
+            walking_inverted,
+        },
     };
     let mut v: Box<dyn Screen> = Box::new(screens::menu::Menu::new(&mut wrapper).await?);
     v.draw(&mut wrapper).await?;
