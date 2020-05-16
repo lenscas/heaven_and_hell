@@ -48,6 +48,9 @@ pub struct Menu {
     level_as_colliders: Vec<DefaultColliderHandle>,
     jump_count: u32,
     max_jumps: u32,
+    is_flying: bool,
+    end_colider: DefaultColliderHandle,
+    render_going_to_left: bool,
 }
 
 impl Menu {
@@ -64,7 +67,7 @@ impl Menu {
         let level = wrapper.get_level(1).await?;
 
         let mut level_as_colliders = Vec::new();
-        //*
+        let mut end_collider = None;
         for (y, line) in level.iter().enumerate() {
             for (x, block) in line.iter().enumerate() {
                 if block.is_colideable() {
@@ -81,6 +84,9 @@ impl Menu {
                         .user_data(*block)
                         .build(BodyPartHandle(reference, 0));
                     let collider_handle = colliders.insert(block_handler);
+                    if block == &Block::PlayerEnd {
+                        end_collider = Some(collider_handle.clone());
+                    }
                     level_as_colliders.push(collider_handle);
                 }
             }
@@ -104,7 +110,7 @@ impl Menu {
         player_body.disable_all_rotations();
         let reference = bodies.insert(player_body);
         let player_shape = ColliderDesc::new(ShapeHandle::new(ncollide2d::shape::Cuboid::new(
-            V2::new(PLAYER_WIDTH as f64 / 2., PLAYER_HEIGHT as f64 / 2.),
+            V2::new(PLAYER_WIDTH as f64 / 2., PLAYER_HEIGHT as f64 / 2. - 1.),
         )))
         .ccd_enabled(true)
         .density(2.)
@@ -134,6 +140,9 @@ impl Menu {
             level_as_colliders,
             jump_count: 0,
             max_jumps: 1,
+            is_flying: false,
+            end_colider: end_collider.expect("Level does not have an end!"),
+            render_going_to_left: false,
         })
     }
 }
@@ -144,13 +153,20 @@ const BLOCK_SIZE_I32: i32 = 32;
 #[async_trait(?Send)]
 impl Screen for Menu {
     async fn draw(&mut self, wrapper: &mut crate::Wrapper<'_>) -> quicksilver::Result<()> {
-        if self.player_pos.x > 320. {
-            wrapper.gfx.set_transform(
-                Transform::translate(Vector::new((self.player_pos.x - 320.).floor(), 0)).inverse(),
-            );
-        } else {
-            wrapper.gfx.set_transform(Transform::IDENTITY);
-        }
+        let cam_pos = {
+            let mut cam_pos = Vector::new(self.player_pos.x - 320., self.player_pos.y - 320.);
+            if cam_pos.x < 0. {
+                cam_pos.x = 0.;
+            }
+            if cam_pos.y < 0. {
+                cam_pos.y = 0.;
+            }
+            cam_pos.x = cam_pos.x.floor();
+            cam_pos.y = cam_pos.y.floor();
+            cam_pos
+        };
+        let transform = Transform::translate(cam_pos).inverse();
+        wrapper.gfx.set_transform(transform);
         wrapper.gfx.clear(Color::WHITE);
         for collider in self.level_as_colliders.iter().cloned() {
             if let Some(collider) = self.colliders.get(collider) {
@@ -175,16 +191,19 @@ impl Screen for Menu {
         if let Some(player) = self.colliders.get(self.player_body) {
             let pos = player.position().translation;
             let pos = Vector::new(pos.x as f32, pos.y as f32);
+            self.render_going_to_left = self.player_pos.x > pos.x;
             let rect = Rectangle::new(pos, (PLAYER_WIDTH, PLAYER_HEIGHT));
 
-            wrapper.gfx.fill_rect(&rect, Color::RED);
+            let image = wrapper.get_player(!self.is_flying, self.render_going_to_left);
+            wrapper.gfx.draw_image(&image, rect);
+
             self.player_pos = pos;
         }
         Ok(())
     }
     async fn update(
         &mut self,
-        _: &mut crate::Wrapper<'_>,
+        wrapper: &mut crate::Wrapper<'_>,
     ) -> quicksilver::Result<Option<Box<dyn Screen>>> {
         if let Some(player) = self.colliders.get_mut(self.player_body) {
             if let Some(body) = self.bodies.get_mut(player.body()) {
@@ -209,10 +228,17 @@ impl Screen for Menu {
         );
 
         for contact in self.geometrical_world.contact_events() {
+            self.is_flying = true;
             match contact {
-                ncollide2d::pipeline::ContactEvent::Started(x, _) => {
+                ncollide2d::pipeline::ContactEvent::Started(x, y) => {
+                    if (x == &self.player_body && y == &self.end_colider)
+                        || (x == &self.end_colider && y == &self.player_body)
+                    {
+                        return Ok(Some(Box::new(Menu::new(wrapper).await?)));
+                    }
                     if x == &self.player_body {
                         self.jump_count = 0;
+                        self.is_flying = false;
                     }
                 }
                 ncollide2d::pipeline::ContactEvent::Stopped(_, _) => {}
