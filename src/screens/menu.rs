@@ -85,6 +85,7 @@ impl Menu {
             x_size = Some(line.len());
             for (x, block) in line.iter().enumerate() {
                 if block.is_colideable() {
+                    wrapper.get_block(*block, x as f64, y as f64).await;
                     let body = RigidBodyDesc::new()
                         .translation(V2::new((x * BLOCK_SIZE) as f64, (y * BLOCK_SIZE) as f64))
                         .status(BodyStatus::Static)
