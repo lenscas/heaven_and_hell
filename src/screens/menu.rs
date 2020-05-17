@@ -198,6 +198,8 @@ impl Screen for Menu {
                 cam_pos.x = (self.level_size.x * BLOCK_SIZE_I32 as f32) - 640.
             }
 
+            cam_pos.x = cam_pos.x.floor();
+            cam_pos.y = cam_pos.y.floor();
             cam_pos
         };
         let transform = Transform::translate(cam_pos).inverse();
