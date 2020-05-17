@@ -8,10 +8,11 @@ pub fn loading_screen(gfx: &Graphics) -> QSImage {
     let mut raw = ImageBuffer::new(160, 160);
     for (x, y, pix) in raw.enumerate_pixels_mut() {
         let delta = (x as f32 - 79.5, y as f32 - 79.5);
-        let angle = (delta.1).atan2(delta.0);
+        let angle = (delta.0).atan2(-delta.1);
         let distance = (delta.0.abs().powf(2.) + delta.1.abs().powf(2.)).sqrt() / 115.;
         let saturation = 1. - ((distance - 0.5).abs() * 2.);
-        let hsl = palette::Hsl::new(palette::RgbHue::from_radians(angle), saturation, distance);
+        let sat2 = (saturation - 0.5).abs() * 2.;
+        let hsl = palette::Hsl::new(palette::RgbHue::from_radians(angle), sat2, 1. - distance);
         let rgb = palette::Srgb::from(hsl);
         *pix = image::Rgb([
             (rgb.red * 255.) as u8,
