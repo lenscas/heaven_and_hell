@@ -2,7 +2,7 @@
 use mergui::Context;
 use quicksilver::lifecycle::Event::{self, PointerMoved};
 use quicksilver::{
-    geom::{Rectangle, Vector},
+    geom::Vector,
     graphics::{Color, FontRenderer, Graphics, Image as QSImage},
     lifecycle::{run, EventStream, Settings, Window},
     load_file,
@@ -12,12 +12,13 @@ use quicksilver::{
 mod directions;
 mod screens;
 use async_trait::async_trait;
-use quicksilver::golem::ColorFormat;
 use rand::seq::SliceRandom;
 mod loading;
 mod maze_gen;
-use loading::loading_screen;
+mod upscaling;
 use std::collections::HashMap;
+
+use crate::upscaling::Loader;
 
 #[async_trait(?Send)]
 pub(crate) trait Screen {
@@ -113,6 +114,7 @@ pub(crate) struct Wrapper<'a> {
     pub raw: HashMap<Block, Vec<u8>>,
     pub end_block: QSImage,
     pub font: FontRenderer,
+    pub scale: Loader,
 }
 
 impl<'a> Wrapper<'a> {
@@ -173,14 +175,17 @@ impl<'a> Wrapper<'a> {
                     }
                 }
             }
-            let g = QSImage::from_raw(
-                &self.gfx,
-                Some(&dithered.into_raw()),
-                16,
-                16,
-                ColorFormat::RGB,
-            )
-            .unwrap();
+
+            let g = self
+                .scale
+                .scale(
+                    dithered.into_raw(),
+                    format!("{}/{}/{}", String::from(block), x, y),
+                    &self.gfx,
+                    (16, 16),
+                    true,
+                )
+                .unwrap();
             self.images.insert((bx, by), g);
         }
         self.images
@@ -228,21 +233,46 @@ impl<'a> Wrapper<'a> {
 }
 
 async fn app(window: Window, gfx: Graphics, events: EventStream) -> Result<()> {
+    let mut loader = Loader::new();
     let context = Context::new([0.0, 0.0].into());
-    let flying =
-        QSImage::from_encoded_bytes(&gfx, include_bytes!("../static/blocks/char_fly.png"))?;
-    let walking =
-        QSImage::from_encoded_bytes(&gfx, include_bytes!("../static/blocks/char_stand.png"))?;
-    let flying_inverted = QSImage::from_encoded_bytes(
+    let flying = loader.scale(
+        include_bytes!("../static/blocks/char_fly.png").to_vec(),
+        String::from("../static/blocks/char_fly.png"),
         &gfx,
-        include_bytes!("../static/blocks/char_fly_inverted.png"),
+        (8, 16),
+        false,
     )?;
-    let walking_inverted = QSImage::from_encoded_bytes(
+    let walking = loader.scale(
+        include_bytes!("../static/blocks/char_stand.png").to_vec(),
+        String::from("../static/blocks/char_stand.png"),
         &gfx,
-        include_bytes!("../static/blocks/char_stand_inverted.png"),
+        (8, 16),
+        false,
     )?;
-    let end_block =
-        QSImage::from_encoded_bytes(&gfx, include_bytes!("../static/blocks/grave.png"))?;
+    let flying_inverted = loader.scale(
+        include_bytes!("../static/blocks/char_fly_inverted.png").to_vec(),
+        String::from("../static/blocks/char_fly_inverted.png"),
+        &gfx,
+        (8, 16),
+        false,
+    )?;
+
+    let walking_inverted = loader.scale(
+        include_bytes!("../static/blocks/char_stand_inverted.png").to_vec(),
+        String::from("../static/blocks/char_stand_inverted.png"),
+        &gfx,
+        (8, 16),
+        false,
+    )?;
+
+    let end_block = loader.scale(
+        include_bytes!("../static/blocks/grave.png").to_vec(),
+        String::from("../static/blocks/grave.png"),
+        &gfx,
+        (16, 16),
+        false,
+    )?;
+
     let font = quicksilver::graphics::VectorFont::from_slice(include_bytes!("../static/font.ttf"))
         .to_renderer(&gfx, 50.)?;
     let mut wrapper = Wrapper {
@@ -262,6 +292,7 @@ async fn app(window: Window, gfx: Graphics, events: EventStream) -> Result<()> {
         },
         end_block,
         font,
+        scale: loader,
     };
     let mut v: Box<dyn Screen> = Box::new(screens::menu::Menu::new(&mut wrapper, 1).await?);
     v.draw(&mut wrapper).await?;

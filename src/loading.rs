@@ -48,5 +48,5 @@ pub fn loading_screen(gfx: &Graphics) -> QSImage {
             }
         }
     }
-    QSImage::from_raw(&gfx, Some(&dithered.into_raw()), 320, 320, ColorFormat::RGB).unwrap()
+    QSImage::from_raw(gfx, Some(&dithered.into_raw()), 320, 320, ColorFormat::RGB).unwrap()
 }

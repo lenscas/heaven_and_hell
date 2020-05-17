@@ -141,9 +141,9 @@ impl Menu {
                     (
                         rng.gen_range(
                             0,
-                            x_size.expect("X had no size") as i32 * BLOCK_SIZE_I32 + 1,
-                        ),
-                        rng.gen_range(0, y_size as i32 * BLOCK_SIZE_I32 + 1),
+                            (x_size.expect("X had no size") as i32 * BLOCK_SIZE_I32 + 1) / 2,
+                        ) * 2,
+                        (rng.gen_range(0, y_size as i32 * BLOCK_SIZE_I32 + 1) / 2) * 2,
                     ),
                     (2, 2),
                 )
@@ -198,8 +198,8 @@ impl Screen for Menu {
                 cam_pos.x = (self.level_size.x * BLOCK_SIZE_I32 as f32) - 640.
             }
 
-            cam_pos.x = cam_pos.x.floor();
-            cam_pos.y = cam_pos.y.floor();
+            cam_pos.x = (cam_pos.x / 2.).floor() * 2.;
+            cam_pos.y = (cam_pos.y / 2.).floor() * 2.;
             cam_pos
         };
         let transform = Transform::translate(cam_pos).inverse();
@@ -230,7 +230,10 @@ impl Screen for Menu {
         }
         if let Some(player) = self.colliders.get(self.player_body) {
             let pos = player.position().translation;
-            let pos = Vector::new(pos.x as f32 + 8., pos.y as f32);
+            let pos = Vector::new(
+                ((pos.x as f32 + 8.) / 2.).floor() * 2.,
+                ((pos.y as f32) / 2.).floor() * 2.,
+            );
             self.render_going_to_left = self.player_pos.x > pos.x;
             let rect = Rectangle::new(pos, (PLAYER_WIDTH, PLAYER_HEIGHT));
 
