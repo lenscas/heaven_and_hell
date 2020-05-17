@@ -59,9 +59,11 @@ pub struct Menu {
 impl Menu {
     pub(crate) async fn new(wrapper: &mut Wrapper<'_>, current_level: u32) -> Result<Self> {
         let image = loading_screen(&wrapper.gfx);
+        wrapper.gfx.set_transform(Transform::IDENTITY);
         wrapper
             .gfx
             .draw_image(&image, Rectangle::new((0, 0), (640, 640)));
+        wrapper.draw_text("LOADING!", Vector::new(250, 250))?;
         wrapper.gfx.present(&wrapper.window)?;
         let mut mechanical_world =
             DefaultMechanicalWorld::new(V2::new(0.0, 9.81 * BLOCK_SIZE_I32 as f64)); //9.81
@@ -134,9 +136,9 @@ impl Menu {
                     (
                         rng.gen_range(
                             0,
-                            x_size.expect("X had no size") as i32 * BLOCK_SIZE_I32 + 30,
+                            x_size.expect("X had no size") as i32 * BLOCK_SIZE_I32 + 300,
                         ),
-                        rng.gen_range(0, y_size as i32 * BLOCK_SIZE_I32 + 30),
+                        rng.gen_range(0, y_size as i32 * BLOCK_SIZE_I32 + 300),
                     ),
                     (2, 2),
                 )
