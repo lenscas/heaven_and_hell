@@ -183,6 +183,7 @@ impl Screen for Menu {
     async fn draw(&mut self, wrapper: &mut crate::Wrapper<'_>) -> quicksilver::Result<()> {
         let cam_pos = {
             let mut cam_pos = Vector::new(self.player_pos.x - 320., self.player_pos.y - 320.);
+            cam_pos.x += 8.;
             if cam_pos.x < 0. {
                 cam_pos.x = 0.;
             }
@@ -195,6 +196,7 @@ impl Screen for Menu {
             if cam_pos.x > (self.level_size.x * BLOCK_SIZE_I32 as f32) - 640. {
                 cam_pos.x = (self.level_size.x * BLOCK_SIZE_I32 as f32) - 640.
             }
+
             cam_pos
         };
         let transform = Transform::translate(cam_pos).inverse();
