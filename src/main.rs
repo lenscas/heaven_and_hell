@@ -3,7 +3,7 @@ use mergui::Context;
 use quicksilver::lifecycle::Event::{self, PointerMoved};
 use quicksilver::{
     geom::{Rectangle, Vector},
-    graphics::{Graphics, Image as QSImage},
+    graphics::{Color, FontRenderer, Graphics, Image as QSImage},
     lifecycle::{run, EventStream, Settings, Window},
     load_file,
     mint::Vector2,
@@ -112,6 +112,7 @@ pub(crate) struct Wrapper<'a> {
     pub player: PlayerHolder,
     pub raw: HashMap<Block, Vec<u8>>,
     pub end_block: QSImage,
+    pub font: FontRenderer,
 }
 
 impl<'a> Wrapper<'a> {
@@ -122,6 +123,12 @@ impl<'a> Wrapper<'a> {
             (true, true) => self.player.flying_inverted.clone(),
             (false, true) => self.player.walking_inverted.clone(),
         }
+    }
+
+    pub(crate) fn draw_text(&mut self, text: &str, location: Vector) -> Result<()> {
+        self.font
+            .draw(&mut self.gfx, text, Color::BLACK, location)
+            .map(drop)
     }
 
     pub(crate) async fn get_block(&mut self, block: Block, x: f64, y: f64) -> QSImage {
@@ -236,6 +243,8 @@ async fn app(window: Window, gfx: Graphics, events: EventStream) -> Result<()> {
     )?;
     let end_block =
         QSImage::from_encoded_bytes(&gfx, include_bytes!("../static/blocks/grave.png"))?;
+    let font = quicksilver::graphics::VectorFont::from_slice(include_bytes!("../static/font.ttf"))
+        .to_renderer(&gfx, 50.)?;
     let mut wrapper = Wrapper {
         window,
         gfx,
@@ -252,30 +261,25 @@ async fn app(window: Window, gfx: Graphics, events: EventStream) -> Result<()> {
             walking_inverted,
         },
         end_block,
+        font,
     };
-    //let mut v: Box<dyn Screen> = Box::new(screens::menu::Menu::new(&mut wrapper, 1).await?);
-    //v.draw(&mut wrapper).await?;
+    let mut v: Box<dyn Screen> = Box::new(screens::menu::Menu::new(&mut wrapper, 1).await?);
+    v.draw(&mut wrapper).await?;
     loop {
         while let Some(e) = wrapper.events.next_event().await {
             if let PointerMoved(e) = &e {
                 wrapper.cursor_at = e.location();
             }
             wrapper.context.event(&e, &wrapper.window);
-            /*
             if let Some(x) = v.event(&mut wrapper, &e).await? {
                 v = x;
-            }*/
+            }
         }
-        /*
         if let Some(x) = v.update(&mut wrapper).await? {
             v = x;
-        }*/
-        //v.draw(&mut wrapper).await?;
+        }
+        v.draw(&mut wrapper).await?;
         wrapper.context.render(&mut wrapper.gfx, &wrapper.window)?;
-        let image = loading_screen(&wrapper.gfx);
-        wrapper
-            .gfx
-            .draw_image(&image, Rectangle::new((0, 0), (640, 640)));
         wrapper.gfx.present(&wrapper.window)?;
     }
 }
