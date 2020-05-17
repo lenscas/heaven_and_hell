@@ -54,6 +54,7 @@ pub struct Menu {
     render_going_to_left: bool,
     current_level: u32,
     stars: Vec<Rectangle>,
+    level_size: Vector,
 }
 
 impl Menu {
@@ -65,14 +66,14 @@ impl Menu {
             .draw_image(&image, Rectangle::new((0, 0), (640, 640)));
         wrapper.draw_text("LOADING!", Vector::new(250, 250))?;
         wrapper.gfx.present(&wrapper.window)?;
-        let mut mechanical_world =
+        let mechanical_world =
             DefaultMechanicalWorld::new(V2::new(0.0, 9.81 * BLOCK_SIZE_I32 as f64)); //9.81
-        let mut geometrical_world = DefaultGeometricalWorld::new();
+        let geometrical_world = DefaultGeometricalWorld::new();
 
         let mut bodies = DefaultBodySet::new();
         let mut colliders = DefaultColliderSet::new();
-        let mut joint_constraints = DefaultJointConstraintSet::new();
-        let mut force_generators = DefaultForceGeneratorSet::new();
+        let joint_constraints = DefaultJointConstraintSet::new();
+        let force_generators = DefaultForceGeneratorSet::new();
 
         let level = wrapper.get_level(current_level).await?;
 
@@ -122,35 +123,31 @@ impl Menu {
 
         player_body.disable_all_rotations();
         let reference = bodies.insert(player_body);
-        let player_shape = ColliderDesc::new(ShapeHandle::new(ncollide2d::shape::Cuboid::new(
-            V2::new(PLAYER_WIDTH as f64 / 2., PLAYER_HEIGHT as f64 / 2. - 1.),
-        )))
-        .ccd_enabled(true)
-        .density(2.)
-        .build(BodyPartHandle(reference, 0));
+        let player_shape =
+            ColliderDesc::new(ShapeHandle::new(ncollide2d::shape::Cuboid::new(V2::new(
+                PLAYER_WIDTH as f64 / 2. + 0.25,
+                PLAYER_HEIGHT as f64 / 2. - 1.,
+            ))))
+            .ccd_enabled(true)
+            .density(2.)
+            .build(BodyPartHandle(reference, 0));
         let collider_handle = colliders.insert(player_shape);
         let mut rng = rand::thread_rng();
+
         let stars = (0..(level_as_colliders.len() * 2))
             .map(|_| {
                 Rectangle::new(
                     (
                         rng.gen_range(
                             0,
-                            x_size.expect("X had no size") as i32 * BLOCK_SIZE_I32 + 300,
+                            x_size.expect("X had no size") as i32 * BLOCK_SIZE_I32 + 1,
                         ),
-                        rng.gen_range(0, y_size as i32 * BLOCK_SIZE_I32 + 300),
+                        rng.gen_range(0, y_size as i32 * BLOCK_SIZE_I32 + 1),
                     ),
                     (2, 2),
                 )
             })
             .collect();
-        mechanical_world.step(
-            &mut geometrical_world,
-            &mut bodies,
-            &mut colliders,
-            &mut joint_constraints,
-            &mut force_generators,
-        );
 
         Ok(Self {
             player_pos,
@@ -172,6 +169,7 @@ impl Menu {
             render_going_to_left: false,
             current_level,
             stars,
+            level_size: Vector::new(x_size.unwrap() as i32, y_size as i32),
         })
     }
 }
@@ -190,8 +188,12 @@ impl Screen for Menu {
             if cam_pos.y < 0. {
                 cam_pos.y = 0.;
             }
-            cam_pos.x = cam_pos.x.floor();
-            cam_pos.y = cam_pos.y.floor();
+            if cam_pos.y > (self.level_size.y * BLOCK_SIZE_I32 as f32) - 640. {
+                cam_pos.y = (self.level_size.y * BLOCK_SIZE_I32 as f32) - 640.
+            }
+            if cam_pos.x > (self.level_size.x * BLOCK_SIZE_I32 as f32) - 640. {
+                cam_pos.x = (self.level_size.x * BLOCK_SIZE_I32 as f32) - 640.
+            }
             cam_pos
         };
         let transform = Transform::translate(cam_pos).inverse();
@@ -222,7 +224,7 @@ impl Screen for Menu {
         }
         if let Some(player) = self.colliders.get(self.player_body) {
             let pos = player.position().translation;
-            let pos = Vector::new(pos.x as f32, pos.y as f32);
+            let pos = Vector::new(pos.x as f32 + 8., pos.y as f32);
             self.render_going_to_left = self.player_pos.x > pos.x;
             let rect = Rectangle::new(pos, (PLAYER_WIDTH, PLAYER_HEIGHT));
 
