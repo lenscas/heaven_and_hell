@@ -1,14 +1,10 @@
 use {
-    quicksilver::{
-        graphics::Graphics,
-        graphics::Image as QSImage,
-        golem::ColorFormat,
-    },
     image::ImageBuffer,
+    quicksilver::{golem::ColorFormat, graphics::Graphics, graphics::Image as QSImage},
     rand::seq::SliceRandom,
 };
 
-pub fn loading_screen(gfx: Graphics) -> QSImage {
+pub fn loading_screen(gfx: &Graphics) -> QSImage {
     let mut raw = ImageBuffer::new(160, 160);
     for (x, y, pix) in raw.enumerate_pixels_mut() {
         let delta = (x as f32 - 79.5, y as f32 - 79.5);
@@ -17,7 +13,11 @@ pub fn loading_screen(gfx: Graphics) -> QSImage {
         let saturation = 1. - ((distance - 0.5).abs() * 2.);
         let hsl = palette::Hsl::new(palette::RgbHue::from_radians(angle), saturation, distance);
         let rgb = palette::Srgb::from(hsl);
-        *pix = image::Rgb([(rgb.red * 255.) as u8, (rgb.green * 255.) as u8, (rgb.blue * 255.) as u8]);
+        *pix = image::Rgb([
+            (rgb.red * 255.) as u8,
+            (rgb.green * 255.) as u8,
+            (rgb.blue * 255.) as u8,
+        ]);
     }
     let mut dithered = image::ImageBuffer::new(320, 320);
     let mut rng = rand::thread_rng();
@@ -47,11 +47,5 @@ pub fn loading_screen(gfx: Graphics) -> QSImage {
             }
         }
     }
-    QSImage::from_raw(
-        &gfx,
-        Some(&dithered.into_raw()),
-        320,
-        320,
-        ColorFormat::RGB,
-    ).unwrap()
+    QSImage::from_raw(&gfx, Some(&dithered.into_raw()), 320, 320, ColorFormat::RGB).unwrap()
 }

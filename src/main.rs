@@ -2,7 +2,7 @@
 use mergui::Context;
 use quicksilver::lifecycle::Event::{self, PointerMoved};
 use quicksilver::{
-    geom::Vector,
+    geom::{Rectangle, Vector},
     graphics::{Graphics, Image as QSImage},
     lifecycle::{run, EventStream, Settings, Window},
     load_file,
@@ -14,8 +14,9 @@ mod screens;
 use async_trait::async_trait;
 use quicksilver::golem::ColorFormat;
 use rand::seq::SliceRandom;
-mod maze_gen;
 mod loading;
+mod maze_gen;
+use loading::loading_screen;
 use std::collections::HashMap;
 
 #[async_trait(?Send)]
@@ -252,23 +253,29 @@ async fn app(window: Window, gfx: Graphics, events: EventStream) -> Result<()> {
         },
         end_block,
     };
-    let mut v: Box<dyn Screen> = Box::new(screens::menu::Menu::new(&mut wrapper, 1).await?);
-    v.draw(&mut wrapper).await?;
+    //let mut v: Box<dyn Screen> = Box::new(screens::menu::Menu::new(&mut wrapper, 1).await?);
+    //v.draw(&mut wrapper).await?;
     loop {
         while let Some(e) = wrapper.events.next_event().await {
             if let PointerMoved(e) = &e {
                 wrapper.cursor_at = e.location();
             }
             wrapper.context.event(&e, &wrapper.window);
+            /*
             if let Some(x) = v.event(&mut wrapper, &e).await? {
                 v = x;
-            }
+            }*/
         }
+        /*
         if let Some(x) = v.update(&mut wrapper).await? {
             v = x;
-        }
-        v.draw(&mut wrapper).await?;
+        }*/
+        //v.draw(&mut wrapper).await?;
         wrapper.context.render(&mut wrapper.gfx, &wrapper.window)?;
+        let image = loading_screen(&wrapper.gfx);
+        wrapper
+            .gfx
+            .draw_image(&image, Rectangle::new((0, 0), (640, 640)));
         wrapper.gfx.present(&wrapper.window)?;
     }
 }

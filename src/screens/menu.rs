@@ -1,4 +1,4 @@
-use crate::{directions::Directions, Block, Screen, Wrapper};
+use crate::{directions::Directions, loading::loading_screen, Block, Screen, Wrapper};
 use quicksilver::{
     geom::{Rectangle, Transform, Vector},
     graphics::Color,
@@ -25,6 +25,7 @@ use nphysics2d::{
     world::{DefaultGeometricalWorld, DefaultMechanicalWorld},
 };
 
+use rand::Rng;
 use std::{collections::HashSet, convert::TryFrom};
 
 const JUMP_VELOCITY: f64 = -200.;
@@ -52,10 +53,16 @@ pub struct Menu {
     end_colider: DefaultColliderHandle,
     render_going_to_left: bool,
     current_level: u32,
+    stars: Vec<Rectangle>,
 }
 
 impl Menu {
     pub(crate) async fn new(wrapper: &mut Wrapper<'_>, current_level: u32) -> Result<Self> {
+        let image = loading_screen(&wrapper.gfx);
+        wrapper
+            .gfx
+            .draw_image(&image, Rectangle::new((0, 0), (640, 640)));
+        wrapper.gfx.present(&wrapper.window)?;
         let mut mechanical_world =
             DefaultMechanicalWorld::new(V2::new(0.0, 9.81 * BLOCK_SIZE_I32 as f64)); //9.81
         let mut geometrical_world = DefaultGeometricalWorld::new();
@@ -69,7 +76,10 @@ impl Menu {
 
         let mut level_as_colliders = Vec::new();
         let mut end_collider = None;
+        let y_size = level.len();
+        let mut x_size = None;
         for (y, line) in level.iter().enumerate() {
+            x_size = Some(line.len());
             for (x, block) in line.iter().enumerate() {
                 if block.is_colideable() {
                     let body = RigidBodyDesc::new()
@@ -117,7 +127,21 @@ impl Menu {
         .density(2.)
         .build(BodyPartHandle(reference, 0));
         let collider_handle = colliders.insert(player_shape);
-
+        let mut rng = rand::thread_rng();
+        let stars = (0..(level_as_colliders.len() * 2))
+            .map(|_| {
+                Rectangle::new(
+                    (
+                        rng.gen_range(
+                            0,
+                            x_size.expect("X had no size") as i32 * BLOCK_SIZE_I32 + 30,
+                        ),
+                        rng.gen_range(0, y_size as i32 * BLOCK_SIZE_I32 + 30),
+                    ),
+                    (2, 2),
+                )
+            })
+            .collect();
         mechanical_world.step(
             &mut geometrical_world,
             &mut bodies,
@@ -145,6 +169,7 @@ impl Menu {
             end_colider: end_collider.expect("Level does not have an end!"),
             render_going_to_left: false,
             current_level,
+            stars,
         })
     }
 }
@@ -169,7 +194,10 @@ impl Screen for Menu {
         };
         let transform = Transform::translate(cam_pos).inverse();
         wrapper.gfx.set_transform(transform);
-        wrapper.gfx.clear(Color::WHITE);
+        wrapper.gfx.clear(Color::BLACK);
+        for star in &self.stars {
+            wrapper.gfx.fill_rect(star, Color::WHITE);
+        }
         for collider in self.level_as_colliders.iter().cloned() {
             if let Some(collider) = self.colliders.get(collider) {
                 let pos = collider.position().translation;
