@@ -181,53 +181,6 @@ const BLOCK_SIZE_I32: i32 = 32;
 #[async_trait(?Send)]
 impl Screen for Menu {
     async fn draw(&mut self, wrapper: &mut crate::Wrapper<'_>) -> quicksilver::Result<()> {
-        let cam_pos = {
-            let mut cam_pos = Vector::new(self.player_pos.x - 320., self.player_pos.y - 320.);
-            cam_pos.x += 8.;
-            cam_pos.y += PLAYER_HEIGHT as f32 / 2.;
-            if cam_pos.x < 0. {
-                cam_pos.x = 0.;
-            }
-            if cam_pos.y < 0. {
-                cam_pos.y = 0.;
-            }
-            if cam_pos.y > (self.level_size.y * BLOCK_SIZE_I32 as f32) - 640. {
-                cam_pos.y = (self.level_size.y * BLOCK_SIZE_I32 as f32) - 640.
-            }
-            if cam_pos.x > (self.level_size.x * BLOCK_SIZE_I32 as f32) - 640. {
-                cam_pos.x = (self.level_size.x * BLOCK_SIZE_I32 as f32) - 640.
-            }
-
-            cam_pos.x = (cam_pos.x / 2.).floor() * 2.;
-            cam_pos.y = (cam_pos.y / 2.).floor() * 2.;
-            cam_pos
-        };
-        let transform = Transform::translate(cam_pos).inverse();
-        wrapper.gfx.set_transform(transform);
-        wrapper.gfx.clear(Color::BLACK);
-        for star in &self.stars {
-            wrapper.gfx.fill_rect(star, Color::WHITE);
-        }
-        for collider in self.level_as_colliders.iter().cloned() {
-            if let Some(collider) = self.colliders.get(collider) {
-                let pos = collider.position().translation;
-                let rec = Rectangle::new(
-                    (pos.x as f32, pos.y as f32),
-                    (BLOCK_SIZE_I32, BLOCK_SIZE_I32),
-                );
-                let block = wrapper
-                    .get_block(
-                        collider
-                            .user_data()
-                            .and_then(|v| v.downcast_ref::<Block>().map(|v| *v))
-                            .unwrap_or(Block::Dirt),
-                        pos.x,
-                        pos.y,
-                    )
-                    .await;
-                wrapper.gfx.draw_image(&block, rec)
-            }
-        }
         if let Some(player) = self.colliders.get(self.player_body) {
             let pos = player.position().translation;
             let pos = Vector::new(
@@ -237,10 +190,56 @@ impl Screen for Menu {
             self.render_going_to_left = self.player_pos.x > pos.x;
             let rect = Rectangle::new(pos, (PLAYER_WIDTH, PLAYER_HEIGHT));
 
+            self.player_pos = pos;
+            let cam_pos = {
+                let mut cam_pos = Vector::new(self.player_pos.x - 320., self.player_pos.y - 320.);
+                cam_pos.x += 8.;
+                cam_pos.y += PLAYER_HEIGHT as f32 / 2.;
+                if cam_pos.x < 0. {
+                    cam_pos.x = 0.;
+                }
+                if cam_pos.y < 0. {
+                    cam_pos.y = 0.;
+                }
+                if cam_pos.y > (self.level_size.y * BLOCK_SIZE_I32 as f32) - 640. {
+                    cam_pos.y = (self.level_size.y * BLOCK_SIZE_I32 as f32) - 640.
+                }
+                if cam_pos.x > (self.level_size.x * BLOCK_SIZE_I32 as f32) - 640. {
+                    cam_pos.x = (self.level_size.x * BLOCK_SIZE_I32 as f32) - 640.
+                }
+
+                cam_pos.x = cam_pos.x.floor();
+                cam_pos.y = cam_pos.y.floor();
+                cam_pos
+            };
+            let transform = Transform::translate(cam_pos).inverse();
+            wrapper.gfx.set_transform(transform);
+            wrapper.gfx.clear(Color::BLACK);
+            for star in &self.stars {
+                wrapper.gfx.fill_rect(star, Color::WHITE);
+            }
+            for collider in self.level_as_colliders.iter().cloned() {
+                if let Some(collider) = self.colliders.get(collider) {
+                    let pos = collider.position().translation;
+                    let rec = Rectangle::new(
+                        (pos.x as f32, pos.y as f32),
+                        (BLOCK_SIZE_I32, BLOCK_SIZE_I32),
+                    );
+                    let block = wrapper
+                        .get_block(
+                            collider
+                                .user_data()
+                                .and_then(|v| v.downcast_ref::<Block>().map(|v| *v))
+                                .unwrap_or(Block::Dirt),
+                            pos.x,
+                            pos.y,
+                        )
+                        .await;
+                    wrapper.gfx.draw_image(&block, rec)
+                }
+            }
             let image = wrapper.get_player(!self.is_flying, self.render_going_to_left);
             wrapper.gfx.draw_image(&image, rect);
-
-            self.player_pos = pos;
         }
         Ok(())
     }
