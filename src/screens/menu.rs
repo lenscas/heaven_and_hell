@@ -184,6 +184,7 @@ impl Screen for Menu {
         let cam_pos = {
             let mut cam_pos = Vector::new(self.player_pos.x - 320., self.player_pos.y - 320.);
             cam_pos.x += 8.;
+            cam_pos.y += PLAYER_HEIGHT as f32 / 2.;
             if cam_pos.x < 0. {
                 cam_pos.x = 0.;
             }
