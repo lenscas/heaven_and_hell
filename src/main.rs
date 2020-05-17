@@ -15,6 +15,7 @@ use async_trait::async_trait;
 use quicksilver::golem::ColorFormat;
 use rand::seq::SliceRandom;
 mod maze_gen;
+mod loading;
 use std::collections::HashMap;
 
 #[async_trait(?Send)]
@@ -133,6 +134,7 @@ impl<'a> Wrapper<'a> {
                 .unwrap()
                 .into_rgb();
             let mut dithered = image::ImageBuffer::new(16, 16);
+            let mut rng = rand::thread_rng();
             for (rx, ry, pixel) in raw.enumerate_pixels() {
                 let (r, g, b) = (pixel[0], pixel[1], pixel[2]);
                 let count = [
@@ -146,7 +148,7 @@ impl<'a> Wrapper<'a> {
                     for i in 0..count[c] {
                         channels[c][i as usize] = 255u8;
                     }
-                    channels[c].shuffle(&mut rand::thread_rng());
+                    channels[c].shuffle(&mut rng);
                     for x in 0..2 {
                         for y in 0..2 {
                             pixels[x][y][c] = channels[c][x * 2 + y];

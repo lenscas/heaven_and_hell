@@ -18,3 +18,4 @@ nalgebra = "0.20"
 ncollide2d = "0.22"
 # Choose the one you need, or both.
 nphysics2d = "0.14"
+palette = "0.5.0"
